@@ -25,7 +25,7 @@ function App() {
   const [displayedTokens, setDisplayedTokens] = useState([]);
   const [tokensPerPage] = useState(18); // Show 16 tokens initially
   const [currentPage, setCurrentPage] = useState(1);
-
+  const [isValidInput, setIsValidInput] = useState(null);
   // Initialize provider and event listeners when component mounts
   useEffect(() => {
     if (typeof window.ethereum !== 'undefined') {
@@ -78,8 +78,21 @@ function App() {
       console.error('Error connecting to wallet:', error);
     }
   }
-
+  function handleAddressInput(e) {
+    //valid input check
+    const address = e.target.value.trim();
+    if (ethers.utils.isAddress(address)) {
+      setUserAddress(address);
+      setIsValidInput(true);
+    } else {
+      setIsValidInput(false);
+    }
+  }
   async function getTokenBalance() {
+    if (!userAddress || !ethers.utils.isAddress(userAddress)) {
+      setIsValidInput(false);
+      return ;
+    }
     setIsLoading(true);
     setHasQueried(false); // Reset query state
     setDisplayedTokens([]); // Reset displayed tokens
@@ -129,6 +142,33 @@ function App() {
   };
 
   const hasMoreTokens = displayedTokens.length < results.tokenBalances?.length;
+  
+  // Add CSS for pulse animation
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.3);
+          opacity: 0.6;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   return (
 
     <Box w="100vw">
@@ -182,7 +222,7 @@ function App() {
           <Button 
             mt={8} 
             _hover={{ border: '1px solid white' }} 
-            bgColor="#cf1e03ff" 
+            bgColor="rgba(225, 3, 3, 1)" 
             onClick={() => {
               setWalletAddress('');
               setUserAddress('');
@@ -195,8 +235,9 @@ function App() {
         <Heading mt={42}>
           Get all the ERC-20 token balances of this address:
         </Heading>
+        <div style={{ alignItems: 'center', display: 'flex', flexDirection: 'row', gap: '12px' }}>
         <Input
-          onChange={(e) => setUserAddress(e.target.value)}
+          onChange={(e) => handleAddressInput(e)}
           color="black"
           w="600px"
           textAlign="center"
@@ -206,6 +247,16 @@ function App() {
           placeholder={userAddress || 'Enter an Ethereum address...'}
           rounded={16}
         />
+        {isValidInput === false && (
+          <div style={{
+            width: '12px',
+            height: '12px',
+            borderRadius: '50%',
+            backgroundColor: '#f40b0bff',
+            animation: 'pulse 2s infinite ease-in-out'
+          }} />
+        )}
+        </div>
         <Button 
           fontSize={20} 
           onClick={getTokenBalance} 
@@ -213,7 +264,7 @@ function App() {
           bgColor="blue"
           isLoading={isLoading}
           loadingText="Loading..."
-          spinner={<Spinner size="md" color="white" />}
+          spinner={<Spinner size="16px" color="white" />}
           isDisabled={isLoading || !userAddress}
         >
           Check ERC-20 Token Balances
